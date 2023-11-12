@@ -3,19 +3,24 @@ import {
   StyleSheet,
   Text,
   View,
-  Linking,
   TouchableOpacity,
   Button,
   Alert,
   TextInput,
 } from 'react-native';
-import DatePicker from 'react-native-date-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+const Stack = createNativeStackNavigator();
+
 const supportedURL = 'https://www.aberdeenceramicsstudio.com/';
 
-const Stack = createNativeStackNavigator();
+const getCurrentDate = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
 
 function HomeScreen({ navigation }) {
   return (
@@ -44,7 +49,7 @@ function HomeScreen({ navigation }) {
 }
 
 function BookingScreen({ navigation }) {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(getCurrentDate());
   const [hours, setHours] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -65,21 +70,18 @@ function BookingScreen({ navigation }) {
       return;
     }
 
-    // Log selected date and hours to the console
     console.log('Selected Date:', selectedDate.toDateString());
     console.log('Selected Hours:', parsedHours);
 
-    // For actual implementation, replace the console.log with your booking logic
-    // ...
-
-    // Clear input fields
-    setSelectedDate(new Date());
+    setSelectedDate(getCurrentDate());
     setHours('');
   }, [hours, selectedDate]);
 
-  const handleDatePickerChange = useCallback((date) => {
+  const handleDatePickerChange = useCallback((event, date) => {
     setShowDatePicker(false);
-    setSelectedDate(date);
+    if (date) {
+      setSelectedDate(date);
+    }
   }, []);
 
   const handleDatePickerCancel = useCallback(() => {
@@ -96,10 +98,11 @@ function BookingScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
         {showDatePicker && (
-          <DatePicker
-            date={selectedDate}
+          <DateTimePicker
+            value={selectedDate}
             mode="date"
-            onDateChange={handleDatePickerChange}
+            minimumDate={getCurrentDate()}
+            onChange={handleDatePickerChange}
             onCancel={handleDatePickerCancel}
           />
         )}
@@ -163,14 +166,11 @@ function BlogScreen({ navigation }) {
 
 const OpenURLButton = ({ url, children }) => {
   const handlePress = useCallback(async () => {
-    // Check if the device supports opening the URL
     const supported = await Linking.canOpenURL(url);
 
     if (supported) {
-      // Open the URL if supported
       await Linking.openURL(url);
     } else {
-      // Show an alert if the URL cannot be opened
       Alert.alert(`Don't know how to open this URL: ${url}`);
     }
   }, [url]);
