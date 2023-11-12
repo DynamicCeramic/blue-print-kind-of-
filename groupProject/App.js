@@ -1,31 +1,26 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState,useCallback} from 'react';
 import {
   StyleSheet,
   Text,
   View,
+  Linking,
   TouchableOpacity,
   Button,
   Alert,
   TextInput,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-const Stack = createNativeStackNavigator();
-
 const supportedURL = 'https://www.aberdeenceramicsstudio.com/';
 
-const getCurrentDate = () => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
-};
+const Stack = createNativeStackNavigator();
 
 function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
-      <View style={{ alignItems: 'center', justifyContent: 'flex-start', flex: 1 }}>
+      <View
+        style={{ alignItems: 'center', justifyContent: 'flex-start', flex: 1 }}>
         <Text>Home Screen</Text>
         <Button
           title="Go to booking"
@@ -36,8 +31,8 @@ function HomeScreen({ navigation }) {
           onPress={() => navigation.navigate('Health')}
         />
         <Button
-          title="Go to the blog post page"
-          onPress={() => navigation.navigate('Blog')}
+          title="go to the blog post page"
+          onPress={() => navigation.navigate('blog')}
         />
         <Text style={{ fontWeight: 'bold', fontSize: 30 }}>
           Welcome to Aberdeen ceramic and our{' '}
@@ -48,93 +43,97 @@ function HomeScreen({ navigation }) {
   );
 }
 
-function BookingScreen({ navigation }) {
-  const [selectedDate, setSelectedDate] = useState(getCurrentDate());
-  const [hours, setHours] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
+function Bookingscreen({ navigation }) {
+  const [date, setDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
 
-  const handleDateChange = useCallback(() => {
-    setShowDatePicker(true);
-  }, []);
-
-  const handleBooking = useCallback(() => {
-    if (!hours) {
-      Alert.alert('Please enter the number of hours.');
+  const handleBookAppointment = () => {
+    // Validate date and time input
+    if (!date || !startTime || !endTime) {
+      Alert.alert('Please enter date, start time, and end time.');
       return;
     }
 
-    const parsedHours = parseFloat(hours);
-
-    if (isNaN(parsedHours) || parsedHours <= 0 || parsedHours > 4) {
-      Alert.alert('Please enter a valid number of hours (1 to 4).');
+    // Validate time format (half hours and full hours)
+    const timeRegex = /^(0?[0-9]|1[0-9]|2[0-3]):(00|30)$/;
+    if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+      Alert.alert("Invalid time format. Enter time in HH:mm format with full hours or half hours.");
       return;
     }
 
-    console.log('Selected Date:', selectedDate.toDateString());
-    console.log('Selected Hours:', parsedHours);
+    // Ensure start and end times are only half hours and full hours
+    const startMinutes = Number(startTime.split(':')[1]);
+    const endMinutes = Number(endTime.split(':')[1]);
 
-    setSelectedDate(getCurrentDate());
-    setHours('');
-  }, [hours, selectedDate]);
-
-  const handleDatePickerChange = useCallback((event, date) => {
-    setShowDatePicker(false);
-    if (date) {
-      setSelectedDate(date);
+    if (startMinutes % 30 !== 0 || endMinutes % 30 !== 0) {
+      Alert.alert('Start and end times must be in half-hour or full-hour increments.');
+      return;
     }
-  }, []);
 
-  const handleDatePickerCancel = useCallback(() => {
-    setShowDatePicker(false);
-  }, []);
+    // Validate that start time is before end time
+    const startTimeObj = new Date(`2000-01-01T${startTime}`);
+    const endTimeObj = new Date(`2000-01-01T${endTime}`);
 
+    const timeDifferenceInMilliseconds = endTimeObj - startTimeObj;
+    const timeDifferenceInHours = timeDifferenceInMilliseconds / (1000 * 60 * 60);
+
+    if (timeDifferenceInHours < 1) {
+      Alert.alert('There must be a minimum gap of 1 hour between start and end times.');
+      return;
+    }
+
+    // Validate that the selected date is not in the past
+    const currentDate = new Date();
+    const selectedDate = new Date(`${currentDate.getFullYear()}-${date}T00:00:00`);
+
+    if (selectedDate<currentDate) {
+      Alert.alert('Selected date must be today or in the future.');
+      return;
+    }
+
+    // Log the entered values
+    console.log('Date:', date);
+    console.log('Start Time:', startTime);
+    console.log('End Time:', endTime);
+    // Perform additional logic if needed
+  };
   return (
     <View style={styles.container}>
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Text>Booking Screen</Text>
-        <TouchableOpacity onPress={handleDateChange}>
-          <Text style={styles.datePickerText}>
-            {selectedDate.toDateString()}
-          </Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={selectedDate}
-            mode="date"
-            minimumDate={getCurrentDate()}
-            onChange={handleDatePickerChange}
-            onCancel={handleDatePickerCancel}
-          />
-        )}
-        <TextInput
-          style={{
-            height: 40,
-            borderColor: 'gray',
-            borderWidth: 1,
-            marginTop: 20,
-            width: 200,
-            textAlign: 'center',
-          }}
-          placeholder="Enter hours"
-          keyboardType="numeric"
-          value={hours}
-          onChangeText={(text) => setHours(text)}
-        />
-        <Button title="Book Now" onPress={handleBooking} />
-        <Button
-          title="Go to health and safety screen"
-          onPress={() => navigation.navigate('Health')}
-        />
-        <Button
-          title="Go to the blog post page"
-          onPress={() => navigation.navigate('Blog')}
-        />
-      </View>
+      <Text>Booking Screen</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Enter date (MM-DD)"
+        value={date}
+        onChangeText={(text) => setDate(text)}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Enter start time (HH:mm)"
+        value={startTime}
+        onChangeText={(text) => setStartTime(text)}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Enter end time (HH:mm)"
+        value={endTime}
+        onChangeText={(text) => setEndTime(text)}
+      />
+      <Button title="Book Now" onPress={handleBookAppointment} />
+
+      <Button
+        title="Go to health and safety screen"
+        onPress={() => navigation.navigate('Health')}
+      />
+      <Button
+        title="Go to the blog post page"
+        onPress={() => navigation.navigate('blog')}
+      />
     </View>
   );
 }
 
-function HealthScreen({ navigation }) {
+function HealthScreen({navigation}) {
   return (
     <View style={styles.container}>
       <Button
@@ -142,14 +141,14 @@ function HealthScreen({ navigation }) {
         onPress={() => navigation.navigate('Booking')}
       />
       <Button
-        title="Go to the blog post page"
-        onPress={() => navigation.navigate('Blog')}
+        title="go to the blog post page"
+        onPress={() => navigation.navigate('blog')}
       />
     </View>
   );
 }
 
-function BlogScreen({ navigation }) {
+function BlogScreen({navigation}) {
   return (
     <View style={styles.container}>
       <Button
@@ -195,9 +194,9 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
         <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Booking" component={BookingScreen} />
+        <Stack.Screen name="Booking" component={Bookingscreen} />
         <Stack.Screen name="Health" component={HealthScreen} />
-        <Stack.Screen name="Blog" component={BlogScreen} />
+        <Stack.Screen name="blog" component={BlogScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -209,11 +208,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#999ea2',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  datePickerText: {
-    fontSize: 20,
-    color: 'blue',
-    textDecorationLine: 'underline',
-    marginTop: 20,
   },
 });
